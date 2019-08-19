@@ -1,0 +1,34 @@
+<table class="table">
+  <tbody>
+    <tr>
+      <td>流程</td><td>{{ node.flow }}</td>
+    </tr>
+    <tr>
+      <td>节点名</td><td>{{ node.name }} <a href="{% url 'show_node' node.pk %}">详情</a></td>
+    </tr>
+    <tr>
+      <td>处理人员</td><td>{{ node.owner }}</td>
+    </tr>
+    <tr>
+      <td>创建时间</td><td>{{ node.create }}</td>
+    </tr>
+    <tr>
+      <td>节点状态</td><td>{{ node.get_status_display }}</td>
+    </tr>
+    {% if node.accept %}
+    <tr>
+      <td>接受时间</td><td>{{ node.accept }}</td>
+    </tr>
+    {% endif %}
+    {% if node.end %}
+    <tr>
+      <td>完成时间</td><td>{{ node.end }}</td>
+    </tr>
+    {% endif %}
+    {% if node.next_node %}
+    <tr>
+      <td>下一节点</td><td>{{ node.next_node }} <a href="{% url 'show_node' node.next_node.pk %}">详情</a></td>
+    </tr>
+    {% endif %}
+  </tbody>
+</table>

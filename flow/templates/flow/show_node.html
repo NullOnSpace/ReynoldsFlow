@@ -1,0 +1,152 @@
+{% extends "flow/index.html" %}
+
+{% block mainbody %}
+<div id="commit-modal" class="hidden">
+  <div class="dialog center-block clearfix">
+    <button type="button" class="close"><span aria-hidden="true">&times;</span></button>
+    <div class="dialog-content center-block">
+      <div class="dialog-text"></div>
+      <form id="node-form">
+        <input type="hidden" name="action">
+        <input type="hidden" name="node" value="{{ node.pk }}">
+        <input type="hidden" name="phase">
+        {% csrf_token %}
+      </form>
+    </div>
+    <div class="commit-box center-block pull-right">
+      <button id="node-confirm" class="btn btn-success">确认</button>
+      <button class="btn btn-default cancel">取消</button>
+    </div>
+  </div>
+</div>
+<div class="panel panel-primary">
+  <div class="panel-heading clearfix">
+    <div class="page-header" data-node="{{ node.pk }}">
+      <h3 class="panel-title"><a href="{% url 'show_flow' node.flow.pk %}">{{ node.flow }}</a>-{{node.name}}-{{node.get_status_display}}</h3>
+    </div>
+    {% if user == node.owner and allow_commit %}
+      {% if node.status == 1 %}
+      <div class="btn-group pull-right">
+        <button type="button" class="btn btn-default node-btn" data-action="default" {% if dest.default %}data-phase="{{ dest.default }}"{% endif %}>提交</button>
+        {% if dest.refuse %}
+        <div class="btn-group">
+          <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
+            回退
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu">
+            {% for phase in dest.refuse %}
+            <li><a class="node-btn" href="javascript:void(0);" data-action="refuse" data-phase="{{ phase }}">{{ phase }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if dest.spe_commit %}
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+            特殊提交
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu">
+            {% for phase in dest.spe_commit %}
+            <li><a class="node-btn" href="javascript:void(0);" data-action="spe_commit" {% if phase %}data-phase="{{ phase }}"{% endif %}>{{ phase }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+      {% elif node.status == 0 %}
+      <div class="pull-right">
+        <button type="button" class="btn btn-success node-btn" data-action="accept">接受</button>
+        <button type="button" class="btn btn-warning node-btn" data-action="delegate" data-phase="{{ node.name }}">转交</button>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="panel-body">
+    {% if node.status == 1 %}
+      {% if user == node.owner %}
+      处理逻辑
+      {% else %}
+      进行中
+      {% endif %}
+    {% elif node.status == 0 %}
+      请选择接受或转交
+    {% else %}
+      已处理 {{ node.get_status_display }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script>
+  $().ready(function(){
+    // node action btn click
+    $(".node-btn").click(function(){
+      var data = new Object();
+      data.action = this.dataset.action;
+      if (this.dataset.phase != undefined){
+        data.phase = this.dataset.phase;
+      }
+      data.node = $(".page-header")[0].dataset.node;
+      $.ajax({
+        url: '{% url "ajax_check_node_action" %}',
+        type: "GET",
+        data: data,
+        success: function(suda){
+          console.log(suda);
+          var objTranDict = {'accept': "接受", 'default': "提交", 'spe_commit': "特殊提交", 'refuse': "驳回", 'delegate': "转交"};
+          var strHintText = "确认" + objTranDict[data.action];
+          if (suda.code == "success"){
+            $("#node-form").find(".user-select").remove();
+            $("#node-form").find("[name=action]").val(data.action);
+            if (data.phase != undefined){
+              $("#node-form").find("[name=phase]").val(data.phase).prop('disabled', false);
+              strHintText += "至 "+ data.phase;
+              var tagSelect = document.createElement("select");
+              $(tagSelect).addClass("form-control");
+              $("#node-form").append(tagSelect);
+              tagSelect.name = "to";
+              tagSelect.classList.add("user-select");
+              var users = suda.users;
+              for (var i=0;i<users.length;i++){
+                var tagOption = document.createElement("option");
+                tagOption.classList.add("user-opt");
+                tagOption.value = users[i][0];
+                tagOption.innerText = users[i][1];
+                tagSelect.appendChild(tagOption);
+              }
+            }else{
+              $("#node-form").find("[name=phase]").val(data.phase).prop('disabled', true);
+              if (data.action == 'default' || data.action == 'spe_commit'){
+                strHintText += "完成";
+              }
+            }
+            $("#commit-modal").find(".dialog-text").text(strHintText);
+            $("#commit-modal").removeClass("hidden");
+          }
+        }
+      });
+    });
+
+    // modal confirm btn click
+    $("#node-confirm").click(function(){
+      $.ajax({
+        url: '{% url "ajax_check_node_action" %}',
+        type: "POST",
+        data: $("#node-form").serialize(),
+        success: function(suda){
+          if (suda.code=="success"){
+            console.log(suda);
+            location.href = suda.href;
+          }
+        }
+      });
+    });
+
+    // other on ready exec
+  });
+</script>
+{% endblock %}

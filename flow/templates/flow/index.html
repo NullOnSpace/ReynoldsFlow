@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block css %}
+<style>
+  #commit-modal{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: RGBA(33,33,33,0.3);
+  }
+  .dialog{
+    width: 33%;
+    background-color: #FEFEFE;
+    margin-top: 160px;
+    min-height: 160px;
+    padding: 20px;
+    border-radius: 5px;
+  }
+  .dialog-content{
+    font-size: 16px;
+    margin-top: 40px;
+    margin-bottom: 20px;
+  }
+  .dialog-text{
+    margin-bottom: 5px;
+  }
+  .panel-body{
+    min-height: 660px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-2">
+      <ul class="nav nav-pills nav-stacked" id="left-nav">
+        <li role="presentation" class="{% if section == 'home' %}active{% endif %}"><a href="{% url 'index' %}">Home</a></li>
+        <li role="presentation" class="{% if section == 'create_flow' %}active{% endif %}"><a href="{% url 'create_flow' %}">创建流程</a></li>
+        <li role="presentation" id='task' class="fold{% if section == 'task' %} active{% endif %}">
+          <a href="javascript:void(0);">我的任务</a>
+          <div class="list-group hidden" id="task-cate">
+            <button class="list-group-item" data-cate="unassigned"><span class="badge">0</span>未指派</button>
+            <button class="list-group-item" data-cate="unaccepted"><span class="badge">0</span>未接受</button>
+            <button class="list-group-item" data-cate="handling"><span class="badge">0</span>正在进行</button>
+            <button class="list-group-item" data-cate="handled"><span class="badge">0</span>已处理</button>
+            <button class="list-group-item" data-cate="finish"><span class="badge">0</span>已结束</button>
+            <button class="list-group-item" data-cate="frozen"><span class="badge">0</span>已冻结</button>
+            <div id="task-list" class="list-group hidden">
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div class="col-md-10">
+      {% if msg %}
+      <div class="alert alert-{{ msg.level }} alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        {{ msg.content }}
+        {% if msg.link %}
+        <a href="{{ msg.link.href }}" class="alert-link">{{ msg.link.content }}</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% block mainbody %}
+    {% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+  $(document).ready(function(){
+    // initialize task list button
+    $("#task").children('a').click(function(){
+      if ($("#task").hasClass("fold")){
+        ajaxUpdateTaskStatistics();
+        $('#task-cate').removeClass("hidden");
+      }else{
+        $("#task-cate").addClass("hidden");
+        $("#task-list").addClass("hidden");
+      }
+      $("#task").toggleClass("fold");
+    });
+
+    // initialize modal box
+    $("#commit-modal").find("button.close, button.cancel").click(function(){
+      $("#commit-modal").addClass("hidden");
+    });
+  })
+
+
+  function ajaxUpdateTaskStatistics(){
+    $.ajax({
+      url: "{% url 'ajax_get_task_stat' %}",
+      type: 'GET',
+      data: {uid: $("#user-base")[0].dataset.uid},
+      dataType: "json",
+      success: function(suda){
+        if (suda.code == "success"){
+          var objTaskStat = suda.data;
+          jqTaskCates = $("#task-cate").children();
+          jqTaskCates.each(function(){
+            var count = objTaskStat[this.dataset.cate];
+            $(this).children("span.badge").text(count);
+          });
+        }else{
+          console.log(suda.msg);
+        }
+      },
+    });
+  }
+
+  $("#task-cate").children("button").each(function(){
+    $(this).click(function(){
+      ajaxUpdateTaskStatistics();
+      var tagTaskCate = this;
+      var jqTaskList = $("#task-list");
+      if ($(this).hasClass("active")){
+        jqTaskList.addClass("hidden");
+      }else{
+        $.ajax({
+          url: "{% url 'ajax_get_task_list' %}",
+          type: "GET",
+          data: {uid: $("#user-base")[0].dataset.uid, cate: this.dataset.cate},
+          success: function(suda){
+            if (suda.code == "success"){
+              var data = suda.data;
+              jqTaskList.empty();
+              for (var i=0;i<data.length;i++){
+                var objTask = data[i];
+                var aListItem = document.createElement("a");
+                jqTaskList.append(aListItem);
+                aListItem.href = objTask[0];
+                $(aListItem).prop("alt", objTask[1]);
+                aListItem.innerText = objTask[1];
+                $(aListItem).addClass("list-group-item").addClass("list-group-item-info");
+              }
+            }else{
+              console.log(suda.msg);
+            }
+          }
+        });
+        jqTaskList.insertAfter(tagTaskCate);
+        $(this).siblings().removeClass("active");
+        jqTaskList.removeClass("hidden");
+      }
+      $(this).toggleClass("active");
+    })
+  })
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "flow/index.html" %}
+
+{% block mainbody %}
+<h2>创建流程</h2>
+<form action="." method="post">
+  {{ form.as_p }}
+  {% csrf_token %}
+  <input type="submit" value="创建流程">
+</form>
+{% endblock %}

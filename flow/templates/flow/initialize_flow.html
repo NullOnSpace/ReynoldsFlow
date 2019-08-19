@@ -1,0 +1,13 @@
+{% extends "flow/index.html" %}
+
+{% block mainbody %}
+<div class="page-header">
+  <h2>{{ flow }} created in {{ flow.create }}</h2>
+</div>
+<form action="." method="post">
+  指派 phase {{ phase }}:
+  {{ form.as_p }}
+  {% csrf_token %}
+  <input type="submit" value="指派任务">
+</form>
+{% endblock %}

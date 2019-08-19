@@ -1,0 +1,76 @@
+{% extends "flow/index.html" %}
+
+
+{% block css %}
+  {{ block.super }}
+  <style>
+    #flow-display .btn{
+      min-height: 80px;
+      min-width: 100px;
+      margin-bottom: 15px;
+    }
+  </style>
+{% endblock %}
+
+{% block mainbody %}
+<div class="panel panel-primary">
+  <div class="panel-heading clearfix">
+    <div class="page-header" data-flow="{{ flow.pk }}">
+      <h3 class="panel-title">{{ flow }}由{{ flow.sponsor }}创建于{{ flow.create }}{% if flow.update %}最后更新于{{ flow.update }}{% endif %}</h3>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div id="flow-display">
+      <button class="btn btn-primary" disabled>
+        <span>发起</span><br>
+        <span>{{ flow.sponsor }}</span>
+      </button>
+        {% with node_list=flow.get_node_list %}
+        {% if node_list %}
+          {% for node in node_list %}
+            <span>&gt;&gt;&gt;</span>
+            <button class="btn btn-info" data-nid="{{ node.pk }}">
+              <span>{{ node.name }} - {{ node.order }}</span><br>
+              <span>{{ node.owner }}</span><br>
+              <span>{{ node.get_status_display }}</span>
+            </button>
+            {% if forloop.last %}
+              {% if node.status >= 2 and not node.next_node %}
+                <span>&gt;&gt;&gt;</span>
+                <button class="btn btn-success" disabled>
+                  <span>结束</span>
+                </button>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+    <hr/>
+    <div id="node-display"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script>
+  $("#flow-display .btn-info").click(function(){
+    var tagButton = this;
+    var strNID = this.dataset.nid;
+    $.ajax({
+      url: "{% url 'ajax_get_node_detail' %}",
+      type: "GET",
+      data: {pk: strNID},
+      dataType: "html",
+      success: function(suda){
+        var tagTable = suda;
+        $("#node-display").empty();
+        $("#node-display").append(tagTable);
+        $(tagButton).addClass("active");
+        $(tagButton).siblings().removeClass("active");
+      }
+    });
+  });
+</script>
+{% endblock %}
