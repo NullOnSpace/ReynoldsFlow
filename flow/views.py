@@ -230,7 +230,7 @@ def ajax_check_node_action(request):
                 users =  [
                     (pk, username)
                     for pk, username in user_qs.values_list('pk', 'username')
-                    if not(action=="delegate" and pk==node.owner.pk)
+                    if not (action=="delegate" and pk==node.owner.pk)
                 ]
                 ret['users'] = users
         else:

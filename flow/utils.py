@@ -3,6 +3,8 @@ from django.utils import timezone
 from .models import Flow, Node
 from .flows import FLOWS
 
+import importlib
+
 
 def get_task_dict(user):
     unassigned = Flow.objects.filter(status=0, head_node__owner=None)
@@ -90,3 +92,13 @@ def handle_node_action(node, action, phase=None, to_user=None):
             flow.status = 2
             flow.save()
             return flow
+
+
+def get_node_view(node):
+    flow = get_node_flow(node)
+    view_fn = flow[node.name].get("view", None)
+    if view_fn:
+        view = importlib.import_module(view_fn)
+        if callable(view):
+            return view
+    return None
