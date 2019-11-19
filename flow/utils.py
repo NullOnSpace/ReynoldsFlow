@@ -31,6 +31,17 @@ def get_node_flow(node):
     return FLOWS[node.flow.flow_name]["flow"]
 
 
+def get_node_entry(node):
+    entry = FLOWS[node.flow.flow_name]["flow"][node.name].get("entry")
+    if entry:
+        module_path, fn_name = entry.rsplit(".", maxsplit=1)
+        mod = importlib.import_module(module_path)
+        fn = getattr(mod, fn_name)
+        if callable(fn):
+            return fn
+    return None
+
+
 def check_action_in_node(node, action, user, phase=None):
     destination = get_node_destination(node)
     flow = get_node_flow(node)
@@ -94,11 +105,11 @@ def handle_node_action(node, action, phase=None, to_user=None):
             return flow
 
 
-def get_node_view(node):
-    flow = get_node_flow(node)
-    view_fn = flow[node.name].get("view", None)
-    if view_fn:
-        view = importlib.import_module(view_fn)
-        if callable(view):
-            return view
-    return None
+# def get_node_view(node):
+#     flow = get_node_flow(node)
+#     view_fn = flow[node.name].get("view", None)
+#     if view_fn:
+#         view = importlib.import_module(view_fn)
+#         if callable(view):
+#             return view
+#     return None

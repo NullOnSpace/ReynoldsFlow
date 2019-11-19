@@ -6,7 +6,7 @@ FLOWS = {
             'design': {
                 'groups': ['designer'],
                 'permission': 'design',
-                'entry': 'drawing_design_design',
+                'entry': 'flow.node_router.drawing_design.design',
                 'destination': {
                     'default': 'proof',
                 },
@@ -14,7 +14,7 @@ FLOWS = {
             'proof': {
                 'groups': ['checker'],
                 'permission': 'design',
-                'entry': 'drawing_design_proof',
+                # 'entry': 'drawing_design_proof',
                 'destination': {
                     'default': 'audit',
                     'refuse': ['design'],
@@ -23,7 +23,7 @@ FLOWS = {
             'audit': {
                 'groups': ['auditor'],
                 'permission': 'design',
-                'entry': 'drawing_design_audit',
+                # 'entry': 'drawing_design_audit',
                 'destination': {
                     'default': 'standard_audit',
                     'refuse': ['design'],
@@ -33,7 +33,7 @@ FLOWS = {
             'standard_audit': {
                 'groups': ['standard_checker'],
                 'permission': 'check',
-                'entry': 'drawing_design_standard_audit',
+                # 'entry': 'drawing_design_standard_audit',
                 'destination': {
                     'default': 'final_audit',
                     'refuse': ['design'],
@@ -42,7 +42,7 @@ FLOWS = {
             'final_audit': {
                 'groups': ['boss'],
                 'permission': 'check',
-                'entry': 'drawing_design_final_audit',
+                # 'entry': 'drawing_design_final_audit',
                 'destination': {
                     'default': None,
                     'refuse': ['design'],

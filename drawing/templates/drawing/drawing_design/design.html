@@ -1,0 +1,49 @@
+{% extends "flow/show_node.html" %}
+
+{% block handling %}
+  {% if user == node.owner %}
+    {% if drawings %}
+    <table class="table">
+      <tr>
+        <th>图纸名称</th>
+        <th>状态</th>
+        <th>更新</th>
+        <th>查看</th>
+        <th>阅览</th>
+        <th>下载</th>
+      </tr>
+      {% for drawing in drawings %}
+      <tr data-did="{{ drawing.id }}">
+        <td>{{ drawing.name }}</td>
+        <td>{{ drawing.get_status_display }}</td>
+        <td><a href="">上传新版本</a></td>
+        <td><a href="">预览</a></td>
+        <td><a href="">查看历史版本</a></td>
+        <td><a href="">下载</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    尚无图纸 <a href="">批量上传新图纸</a>
+    {% endif %}
+  {% else %}
+  <table class="table">
+      <tr>
+        <th>图纸名称</th>
+        <th>状态</th>
+        <th>查看</th>
+        <th>阅览</th>
+        <th>下载</th>
+      </tr>
+      {% for drawing in drawings %}
+      <tr data-did="{{ drawing.id }}">
+        <td>{{ drawing.name }}</td>
+        <td>{{ drawing.get_status_display }}</td>
+        <td><a href="">预览</a></td>
+        <td><a href="">查看历史版本</a></td>
+        <td><a href="">下载</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+{% endblock %}

@@ -7,12 +7,16 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.urls import reverse
 from django.template import loader
+from django.db.models import Max
 
 from .flows import FLOWS
 from .models import Flow, Node, User
 from .utils import (get_task_dict, check_action_in_node, get_node_destination,
-                    handle_node_action,)
+                    handle_node_action, get_node_entry)
+from drawing.forms import DrawingForm
+from drawing.models import DrawingNode, DrawingNodeFlowRel
 
+import importlib
 
 # Create your views here.
 @login_required
@@ -112,8 +116,12 @@ def initialize_flow(request, flow_id):
 
 @login_required
 def show_node(request, node_id):
+    user = request.user
     node = get_object_or_404(Node, pk=node_id)
     dest = get_node_destination(node)
+    entry = get_node_entry(node)
+    if entry:
+        return entry(request, node, user, dest)
     return render(request, 'flow/show_node.html', {
         'node': node, 'section': 'task', 'dest': dest, 'allow_commit': True,
     })
@@ -258,3 +266,24 @@ def ajax_get_node_detail(request):
     tpl = loader.get_template('flow/node_detail_frag.html')
     context = {'node': node}
     return HttpResponse(tpl.render(context, request))
+
+
+@login_required
+def ajax_upload_drawing(request, node_id):
+    ret = {'code': 'fail'}
+    try:
+        node = Node.objects.get(pk=node_id)
+    except Node.DoesNotExist:
+        ret['msg'] = "node cant find"
+        return JsonResponse(ret)
+    if request.method == "POST":
+        drawing = DrawingForm(request.POST, request.FILES)
+        drawing = drawing.save(save=False)
+        id_name = drawing.location.name.split('/')[-1].split('_')[0]
+        dn, created = DrawingNode.objects.get_or_create(name=id_name)
+        if created:
+            dn.author = request.user
+            DrawingNodeFlowRel.objects.create(flow=node.flow, drawing_node=dn)
+        drawing.drawing_node = dn
+        qs = drawing.drawing_node.drawing_set.aggregate(Max('order'))
+        drawing.order = qs['order__max'] + 1
