@@ -21,5 +21,4 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('account.urls')),
     path('flow/', include('flow.urls')),
-    path('theater/', include('theater.urls')),
 ]

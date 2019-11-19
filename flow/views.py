@@ -76,7 +76,7 @@ def initialize_flow(request, flow_id):
         return render(request, 'flow/index.html', {
                 'section': 'home', 'msg': {
                     'level': 'warning',
-                    'content': 'Flow has been assigned!'.format(flow)
+                    'content': 'Flow {} has been assigned!'.format(flow)
                 }
             })
     users = User.objects.values_list('id', 'username')
@@ -187,16 +187,20 @@ def ajax_check_node_action(request):
         ret['msg'] = "node does not exist"
         return JsonResponse(ret)
     if node.owner != user:
+        # !!The range for valid user should change someday.
         ret['msg'] = "no permission to edit node"
         return JsonResponse(ret)
     action = query_dict.get('action', None)
     phase = query_dict.get('phase', None)
     checked, extra = check_action_in_node(node, action, user, phase)
     if checked:
+        # extra is permission to filter next node's user or None
+        print('need permission', extra)
         ret['code'] = "success"
         if phase is not None:
-            permission = extra
+            permission = 'flow.flow.' + extra
             if method == "POST":
+                # User change a node status, pass a new url.
                 to_pk = request.POST.get('to')
                 try:
                     to_user = User.objects.get(pk=to_pk)
@@ -205,15 +209,15 @@ def ajax_check_node_action(request):
                     ret['msg'] = "to user not exist"
                     return JsonResponse(ret)
                 # check if to_user has perm
-                if (not to_user.has_perm(permission) or
+                if ((not to_user.has_perm(permission)) or
                         (action == "delegate" and node.owner == to_user)):
                     ret['code'] = "fail"
                     ret['msg'] = "to-user not valid"
                     return JsonResponse(ret)
                 # if to_user checked create new node or change node status
                 new_node = handle_node_action(node, action, phase, to_user)
-                # just for debug
-                assert isinstance(new_node, Node)
+                # The next url current user jump to depending on whether
+                # the user is the owner is node.
                 if new_node.owner == user:
                     href = reverse("show_node", args=(new_node.pk,))
                 else:
@@ -221,24 +225,17 @@ def ajax_check_node_action(request):
                     href = reverse("index")
                 ret["href"] = href
             else:
-                print(permission)
-                perm = Permission.objects.get(codename=permission)
-                groups = perm.group_set.all()
-                user_qs = None
-                print(groups)
-                for group in groups:
-                    qs = group.user_set.all()
-                    if user_qs is None:
-                        user_qs = qs
-                    else:
-                        user_qs.union(qs)
-                print(user_qs)
-                # in case that grant a user for special permission
-                user_qs.union(perm.user_set.all())
+                # User needs a list of users that can handle next node.
+                # ~Consider a better way like using cache to cache users
+                # ~of every flow permission
+                all_user = User.objects.filter(is_active=True)
                 users =  [
-                    (pk, username)
-                    for pk, username in user_qs.values_list('pk', 'username')
-                    if not (action=="delegate" and pk==node.owner.pk)
+                    (u.pk, u.username)
+                    for u in all_user.only('pk', 'username')
+                    if (
+                        (not (action=="delegate" and u.pk==node.owner.pk))
+                        and u.has_perm(permission)
+                    )
                 ]
                 ret['users'] = users
         else:

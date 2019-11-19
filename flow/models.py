@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.urls import reverse
 
+from .flows import FLOWS
+
 
 # Create your models here.
 class User(AbstractUser):
@@ -14,7 +16,9 @@ class Flow(models.Model):
         (4, '预留4'),
     )
 
+    # flow's name created by sponsor of this flow instance
     name = models.CharField(max_length=150, unique=True)
+    # flow_name in the FLOWS in flows.py
     flow_name = models.CharField(max_length=50)
     status = models.SmallIntegerField(choices=FLOW_STATUS, default=0)
     head_node = models.OneToOneField("Node",
@@ -47,12 +51,18 @@ class Flow(models.Model):
                 node = node.next_node
         return node_list
 
+    @property
+    def definition(self):
+        return FLOWS.get(self.flow_name)
+
 
 class Node(models.Model):
     NODE_STATUS = (
         (0, '未接受'), (1, '已接受'), (2, '已提交'), (3, '已转交'),
         (4, '已驳回'), (5, '已特殊提交'), (6, '预留六'), (7, '预留七'),
     )
+
+    # node name in FLOWS of flows.py
     name = models.CharField(max_length=50)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     create = models.DateTimeField(auto_now_add=True)
@@ -73,3 +83,10 @@ class Node(models.Model):
 
     def get_absolute_url(self):
         return reverse("show_node", args=(self.pk,))
+
+    @property
+    def definition(self):
+        flow_dict = FLOWS.get(self.flow.flow_name)
+        if flow_dict:
+            return flow_dict['flow'].get(self.name)
+        return None

@@ -1,10 +1,15 @@
+import warnings
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+
+
 FLOWS = {
     'drawing_design': {
         'desc': 'a flow to design new series of project drawings',
         'start': 'design',
         'flow': {
             'design': {
-                'groups': ['designer'],
+                # 'groups': ['designer'],
                 'permission': 'design',
                 'entry': 'flow.node_router.drawing_design.design',
                 'destination': {
@@ -12,7 +17,7 @@ FLOWS = {
                 },
             },
             'proof': {
-                'groups': ['checker'],
+                # 'groups': ['checker'],
                 'permission': 'design',
                 # 'entry': 'drawing_design_proof',
                 'destination': {
@@ -21,7 +26,7 @@ FLOWS = {
                 }
             },
             'audit': {
-                'groups': ['auditor'],
+                # 'groups': ['auditor'],
                 'permission': 'design',
                 # 'entry': 'drawing_design_audit',
                 'destination': {
@@ -31,7 +36,7 @@ FLOWS = {
                 }
             },
             'standard_audit': {
-                'groups': ['standard_checker'],
+                # 'groups': ['standard_checker'],
                 'permission': 'check',
                 # 'entry': 'drawing_design_standard_audit',
                 'destination': {
@@ -40,7 +45,7 @@ FLOWS = {
                 }
             },
             'final_audit': {
-                'groups': ['boss'],
+                # 'groups': ['boss'],
                 'permission': 'check',
                 # 'entry': 'drawing_design_final_audit',
                 'destination': {
@@ -53,8 +58,32 @@ FLOWS = {
 }
 
 
+def check_permissions(auto_create=False):
+    ct = ContentType.objects.get_by_natural_key('flow', 'node')
+    for flow_name, flow_def in FLOWS.items():
+        for phase_name, phase_def in flow_def['flow'].items():
+            permission = phase_def['permission']
+            perm_codename = 'flow.'+permission
+            if auto_create:
+                obj, created = Permission.objects.get_or_create(
+                    codename=perm_codename,
+                    defaults=dict(name=permission, content_type=ct)
+                )
+            else:
+                created = (not
+                    Permission.objects.filter(codename=perm_codename).exists()
+                )
+            if created:
+                info = (
+                    f'No such a permission "{permission}" '
+                    f'for phase {phase_name} in flow {flow_name} .' +
+                    ('Creat a new perm "{}".'.format(perm_codename)
+                     if auto_create else '')
+                )
+                warnings.warn(info)
+
+
 def check_flows():
-    import warnings
     for flow_name, flow_def in FLOWS.items():
         start = flow_def.get('start')
         if start is None:
@@ -90,28 +119,26 @@ def check_flows():
                     'phase {} in flow {}'.format(phase_name, flow_name) +
                     ' has a destination to itself in default')
             refuses = destination.get('refuse')
-            if refuses:
-                for refuse in refuses:
-                    if refuse not in phase_names:
-                        warnings.warn('refuse destination: {}'.format(refuse) +
-                                      'not in phase {} '.format(phase_name) +
-                                      "of flow {}".format(flow_name))
-                    if refuse == phase_name:
-                        raise ValueError(
-                            'phase {} in flow {}'.format(phase_name, flow_name)\
-                            + ' has a destination to itself in refuse')
+            for refuse in refuses:
+                if refuse not in phase_names:
+                    warnings.warn('refuse destination: {}'.format(refuse) +
+                                  'not in phase {} '.format(phase_name) +
+                                  "of flow {}".format(flow_name))
+                if refuse == phase_name:
+                    raise ValueError(
+                        'phase {} in flow {}'.format(phase_name, flow_name)\
+                        + ' has a destination to itself in refuse')
             spe_commits = destination.get('spe_commit')
-            if spe_commits:
-                for spe_commit in spe_commits:
-                    if spe_commit not in phase_names:
-                        warnings.warn(
-                            'spe_commit destination: {}'.format(spe_commit) +
-                            'not in phase {} '.format(phase_name) +
-                            "of flow {}".format(flow_name))
-                    if spe_commit == phase_name:
-                        raise ValueError(
-                            'phase {} in flow {}'.format(phase_name, flow_name)\
-                            + ' has a destination to itself in spe_commit')
+            for spe_commit in spe_commits:
+                if spe_commit not in phase_names:
+                    warnings.warn(
+                        'spe_commit destination: {}'.format(spe_commit) +
+                        'not in phase {} '.format(phase_name) +
+                        "of flow {}".format(flow_name))
+                if spe_commit == phase_name:
+                    raise ValueError(
+                        'phase {} in flow {}'.format(phase_name, flow_name)\
+                        + ' has a destination to itself in spe_commit')
         main_route, passed = _go_through_flow(start, flow)
         isolate = phase_names.difference(passed)
         if isolate:
