@@ -14,8 +14,8 @@
       </tr>
       {% for drawing in drawings %}
       <tr data-did="{{ drawing.id }}">
-        <td>{{ drawing.name }}</td>
-        <td>{{ drawing.get_status_display }}</td>
+        <td>{{ drawing.drawing_node.name }}</td>
+        <td>{{ drawing.drawing_node.get_status_display }}</td>
         <td><a href="">上传新版本</a></td>
         <td><a href="">预览</a></td>
         <td><a href="">查看历史版本</a></td>
@@ -24,8 +24,15 @@
       {% endfor %}
     </table>
     {% else %}
-    尚无图纸 <a href="">批量上传新图纸</a>
+    尚无图纸
     {% endif %}
+    <p><a href="#">批量上传新图纸</a></p>
+    <p>
+      <form id='upload_drawing' enctype="multipart/form-data">
+        {{ form }}
+        <input type="submit" value="上传新图纸">
+      </form>
+    </p>
   {% else %}
   <table class="table">
       <tr>
@@ -46,4 +53,32 @@
       {% endfor %}
     </table>
   {% endif %}
+{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script>
+  var jqForm = $('#upload_drawing');
+  var strUploadUrl = "{% url 'upload_drawing' node.pk %}";
+  var jqSubmit = jqForm.find('input:submit');
+  jqSubmit.click(function(event) {
+    var objFormData = new FormData(jqForm[0]);
+    $.ajax({
+      url: strUploadUrl,
+      type: 'POST',
+      data: objFormData,
+      contentType: false,
+      processData: false,
+      success: function(suda){
+        console.log(suda.code);
+        if (suda.code != 'success') {
+          console.log(suda.msg);
+        } else {
+          window.location.reload(true);
+        }
+      }
+    });
+    event.preventDefault();
+  });
+</script>
 {% endblock %}

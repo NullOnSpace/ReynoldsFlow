@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.forms.models import modelform_factory
 from django.forms import widgets
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.urls import reverse
 from django.template import loader
 from django.db.models import Max
@@ -263,24 +263,3 @@ def ajax_get_node_detail(request):
     tpl = loader.get_template('flow/node_detail_frag.html')
     context = {'node': node}
     return HttpResponse(tpl.render(context, request))
-
-
-@login_required
-def ajax_upload_drawing(request, node_id):
-    ret = {'code': 'fail'}
-    try:
-        node = Node.objects.get(pk=node_id)
-    except Node.DoesNotExist:
-        ret['msg'] = "node cant find"
-        return JsonResponse(ret)
-    if request.method == "POST":
-        drawing = DrawingForm(request.POST, request.FILES)
-        drawing = drawing.save(save=False)
-        id_name = drawing.location.name.split('/')[-1].split('_')[0]
-        dn, created = DrawingNode.objects.get_or_create(name=id_name)
-        if created:
-            dn.author = request.user
-            DrawingNodeFlowRel.objects.create(flow=node.flow, drawing_node=dn)
-        drawing.drawing_node = dn
-        qs = drawing.drawing_node.drawing_set.aggregate(Max('order'))
-        drawing.order = qs['order__max'] + 1

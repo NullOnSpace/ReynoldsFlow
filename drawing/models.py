@@ -24,9 +24,13 @@ class DrawingNode(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def drawing(self):
+        return self.drawing_set.latest('order')
+
 
 class Drawing(models.Model):
-    STORAGE = FileSystemStorage(location='E://drawings', base_url='/media')
+    STORAGE = FileSystemStorage(location='/media/file', base_url='/media')
 
     order = models.PositiveSmallIntegerField()
     author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)

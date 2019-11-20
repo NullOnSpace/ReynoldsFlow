@@ -50,9 +50,9 @@ def check_action_in_node(node, action, user, phase=None):
     after action acted on current node.
     Return True and Permission codename if check pass,
     otherwise return False and the reason it doesn't pass.
-    It doesn't check if the use has permission to act on the node,
-    which can be done outside this function by check the user is the owner of
-    the node.
+    It doesn't check if the use has the permission to act on the node,
+    which can be done outside this function by checking, say,
+    if the user is the owner of the node.
     """
     destination = get_node_destination(node)
     flow = get_node_flow(node)
